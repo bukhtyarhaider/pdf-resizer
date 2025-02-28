@@ -29,8 +29,8 @@ def resize_process_pdf(pdf_path: str, size: str, order_number: int, file_number:
 
     # Get target dimensions using PaperSize from pypdf.
     # The size parameter (e.g., "A4") must match an attribute on PaperSize.
-    target_width = getattr(PaperSize, size).width
-    target_height = getattr(PaperSize, size).height
+    target_width = getattr(PaperSize, size).height
+    target_height = getattr(PaperSize, size).width
 
     for page_index, page in enumerate(reader.pages):
         # Check orientation: if the page is portrait, rotate it
