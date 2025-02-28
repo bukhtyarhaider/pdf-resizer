@@ -29,8 +29,8 @@ def resize_process_pdf(pdf_path: str, size: str, order_number: int, file_number:
 
     # Get target dimensions using PaperSize from pypdf.
     # The size parameter (e.g., "A4") must match an attribute on PaperSize.
-    target_width = getattr(PaperSize, size).width
-    target_height = getattr(PaperSize, size).height
+    target_width = getattr(PaperSize, size).height
+    target_height = getattr(PaperSize, size).width
 
     for page_index, page in enumerate(reader.pages):
         # Check orientation: if the page is portrait, rotate it
@@ -39,15 +39,28 @@ def resize_process_pdf(pdf_path: str, size: str, order_number: int, file_number:
             current_width = float(page.mediabox.height)  # after rotation, width/height swap
             current_height = float(page.mediabox.width)
         else:
+            print("here in else")
+            print("height in else: ", page.mediabox.height)
             current_width = float(page.mediabox.width)
             current_height = float(page.mediabox.height)
 
         # Calculate scaling factors
         x_scale = target_width / current_width
         y_scale = target_height / current_height
+        # x_scale = 1
+        # y_scale = 1
+
+        print("X target: ", target_width)
+        print("X Current: ", current_width)
+        print("X Scale: ", x_scale)
+
+        print("Y target: ", target_height)
+        print("Y Current: ", current_height)
+        print("Y Scale: ", y_scale)
+
 
         # Scale the page
-        page.scale(x_scale, y_scale)
+        page.scale(x_scale, abs(y_scale))
         pdf_merger.add_page(page)
 
         # Write the individual page PDF to the processed folder
@@ -80,7 +93,7 @@ if __name__ == '__main__':
         print(f"File {input_pdf} not found. Please add a PDF named 'sample.pdf' in the 'input' folder.")
         exit(1)
 
-    size = "A2"          # Use an attribute from PaperSize (e.g., "A4", "Letter", etc.)
+    size = "A0"          # Use an attribute from PaperSize (e.g., "A4", "Letter", etc.)
     order_number = 123
     file_number = 1
 
