@@ -1,4 +1,4 @@
-```markdown
+
 # PDF Resizer Project
 
 This project provides a standalone Python script that processes PDF files by resizing each page to a specified paper size using the `PaperSize` class from the `pypdf` library. It reads a PDF from the `input` folder, rotates and scales the pages as needed, and saves both individual page PDFs and a merged PDF into the `processed` folder.
