@@ -32,29 +32,14 @@ def resize_process_pdf(pdf_path: str, size: str, order_number: int, file_number:
     target_height = target_page.height
 
     for page_index, page in enumerate(reader.pages):
-<<<<<<< Updated upstream
-        # Check orientation: if the page is portrait, rotate it
-        if page.mediabox.width < page.mediabox.height:
-            page = page.rotate(270)
-            current_width = float(page.mediabox.height)  # after rotation, width/height swap
-            current_height = float(page.mediabox.width)
-        else:
-            current_width = float(page.mediabox.width)
-            current_height = float(page.mediabox.height)
-=======
         # Keep the original orientation; just read the page dimensions
         current_width = float(page.mediabox.width)
         current_height = float(page.mediabox.height)
->>>>>>> Stashed changes
 
         # Compute scale factors to match the target size
         x_scale = target_width / current_width
         y_scale = target_height / current_height
 
-<<<<<<< Updated upstream
-        # Scale the page
-        page.scale(x_scale, y_scale)
-=======
         print("X target: ", target_width)
         print("X Current: ", current_width)
         print("X Scale: ", x_scale)
@@ -64,7 +49,6 @@ def resize_process_pdf(pdf_path: str, size: str, order_number: int, file_number:
         print("Y Scale: ", y_scale)
         # Apply scaling
         page.scale(abs(x_scale), abs(y_scale))
->>>>>>> Stashed changes
         pdf_merger.add_page(page)
 
         # Write the individual page PDF to the processed folder
@@ -96,13 +80,8 @@ if __name__ == '__main__':
         print(f"File {input_pdf} not found. Please add a PDF named '4020iii_11.pdf' in the 'input' folder.")
         exit(1)
 
-<<<<<<< Updated upstream
-    size = "A2"          # Use an attribute from PaperSize (e.g., "A4", "Letter", etc.)
-    order_number = 123
-=======
     size = "A1"           # e.g., "A4", "Letter", etc.
     order_number = 1244
->>>>>>> Stashed changes
     file_number = 1
 
     merged_path, page_files = resize_process_pdf(input_pdf, size, order_number, file_number)
