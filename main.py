@@ -27,28 +27,35 @@ def resize_process_pdf(pdf_path: str, size: str, order_number: int, file_number:
 
     # Get target dimensions using PaperSize from pypdf.
     # The size parameter (e.g., "A4") must match an attribute on PaperSize.
-    target_page = getattr(PaperSize, size)
-    target_width = target_page.width
-    target_height = target_page.height
+    paper_size = getattr(PaperSize, size)
+    portrait_width = paper_size.width
+    portrait_height = paper_size.height
 
     for page_index, page in enumerate(reader.pages):
-        # Keep the original orientation; just read the page dimensions
+        # Get original page dimensions
         current_width = float(page.mediabox.width)
         current_height = float(page.mediabox.height)
 
-        # Compute scale factors to match the target size
-        x_scale = target_width / current_width
-        y_scale = target_height / current_height
+        # Determine target dimensions based on original orientation
+        if current_width > current_height:  # landscape page
+            target_width = portrait_height
+            target_height = portrait_width
+        else:  # portrait page
+            target_width = portrait_width
+            target_height = portrait_height
+
+        # Compute uniform scaling factor to preserve aspect ratio
+        scale = min(target_width / current_width, target_height / current_height)
 
         print("X target: ", target_width)
         print("X Current: ", current_width)
-        print("X Scale: ", x_scale)
+        print("X Scale: ", scale)
 
         print("Y target: ", target_height)
         print("Y Current: ", current_height)
-        print("Y Scale: ", y_scale)
+        print("Y Scale: ", scale)
         # Apply scaling
-        page.scale(abs(x_scale), abs(y_scale))
+        page.scale(abs(scale), abs(scale))
         pdf_merger.add_page(page)
 
         # Write the individual page PDF to the processed folder
@@ -75,7 +82,7 @@ if __name__ == '__main__':
         print("Please add a PDF file to the 'input' folder and run the script again.")
         exit(1)
 
-    input_pdf = os.path.join(input_dir, "Updated April 2025 _1.pdf")
+    input_pdf = os.path.join(input_dir, "4020iii_11.pdf")
     if not os.path.isfile(input_pdf):
         print(f"File {input_pdf} not found. Please add a PDF named '4020iii_11.pdf' in the 'input' folder.")
         exit(1)
