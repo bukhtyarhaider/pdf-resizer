@@ -1,7 +1,8 @@
 import os
-import io
 import secrets
+import io
 from pypdf import PdfReader, PdfWriter, PaperSize
+from pypdf.generic import RectangleObject
 # Define a dictionary for paper sizes (dimensions in points)
 PAPER_SIZES = {
     "A0":    {"width": 2383.94, "height": 3370.39},  # 841 x 1189 mm
@@ -11,63 +12,68 @@ PAPER_SIZES = {
 }
 
 def resize_process_pdf(pdf_path: str, size: str, order_number: int, file_number: int):
-    # Open the PDF file from the local filesystem
-    with open(pdf_path, "rb") as f:
-        filestream = io.BytesIO(f.read())
-    reader = PdfReader(filestream)
+    # Validate input file
+    if not pdf_path.lower().endswith('.pdf'):
+        raise ValueError("Input must be a PDF file.")
+    
+    # Process paper size
+    size = size.upper()
+    try:
+        paper_size = getattr(PaperSize, size)
+    except AttributeError:
+        raise ValueError(f"Invalid paper size: {size}")
 
-    # Create the output directory if it doesn't exist
-    processed_dir = "processed"
-    if not os.path.exists(processed_dir):
-        os.makedirs(processed_dir)
+    # Read PDF into memory buffer
+    with open(pdf_path, "rb") as f:
+        pdf_data = io.BytesIO(f.read())
+    
+    reader = PdfReader(pdf_data)
+
+    # Create output directory
+    processed_dir = os.path.abspath("processed")
+    os.makedirs(processed_dir, exist_ok=True)
 
     token = secrets.token_hex(8)
-    pdf_page_files = []  # List to hold paths of individual page PDFs
+    pdf_page_files = []
     pdf_merger = PdfWriter()
 
-    # Get target dimensions using PaperSize from pypdf.
-    # The size parameter (e.g., "A4") must match an attribute on PaperSize.
-    paper_size = getattr(PaperSize, size)
+    # Get dimensions from PaperSize
     portrait_width = paper_size.width
     portrait_height = paper_size.height
 
     for page_index, page in enumerate(reader.pages):
-        # Get original page dimensions
+        # Get original dimensions
         current_width = float(page.mediabox.width)
         current_height = float(page.mediabox.height)
 
-        # Determine target dimensions based on original orientation
-        if current_width > current_height:  # landscape page
+        # Determine target dimensions
+        if current_width > current_height:  # landscape
             target_width = portrait_height
             target_height = portrait_width
-        else:  # portrait page
+        else:  # portrait
             target_width = portrait_width
             target_height = portrait_height
 
-        # Compute uniform scaling factor to preserve aspect ratio
+        # Calculate scaling factor
         scale = min(target_width / current_width, target_height / current_height)
-
-        print("X target: ", target_width)
-        print("X Current: ", current_width)
-        print("X Scale: ", scale)
-
-        print("Y target: ", target_height)
-        print("Y Current: ", current_height)
-        print("Y Scale: ", scale)
-        # Apply scaling
-        page.scale(abs(scale), abs(scale))
+        page.scale(scale, scale)
+        
+        # Update mediabox to target dimensions
+        page.mediabox = RectangleObject([0, 0, target_width, target_height])
+        
+        # Add to merger
         pdf_merger.add_page(page)
 
-        # Write the individual page PDF to the processed folder
-        output_page_filename = f"output_{token}_{size}_{page_index}.pdf"
+        # Save individual page
+        output_page_filename = f"output_{token}{size}{page_index}.pdf"
         output_page_path = os.path.join(processed_dir, output_page_filename)
-        page_writer = PdfWriter()
-        page_writer.add_page(page)
-        with open(output_page_path, "wb") as f_out:
-            page_writer.write(f_out)
+        with PdfWriter() as page_writer:
+            page_writer.add_page(page)
+            with open(output_page_path, "wb") as f_out:
+                page_writer.write(f_out)
         pdf_page_files.append(output_page_path)
 
-    # Write the merged PDF file to the processed folder
+    # Save merged PDF
     merged_pdf_filename = f"Order{order_number}_File{file_number}.pdf"
     merged_pdf_path = os.path.join(processed_dir, merged_pdf_filename)
     with open(merged_pdf_path, "wb") as f_out:
@@ -76,24 +82,40 @@ def resize_process_pdf(pdf_path: str, size: str, order_number: int, file_number:
     return merged_pdf_path, pdf_page_files
 
 if __name__ == '__main__':
-    input_dir = "input"
-    if not os.path.exists(input_dir):
-        os.makedirs(input_dir)
-        print("Please add a PDF file to the 'input' folder and run the script again.")
+    input_dir = os.path.abspath("input")
+    os.makedirs(input_dir, exist_ok=True)
+
+    # Find all PDF files in input directory
+    filelist = [f for f in os.listdir(input_dir) if f.lower().endswith('.pdf')]
+    if not filelist:
+        print("No PDF files found in 'input' directory.")
         exit(1)
 
-    input_pdf = os.path.join(input_dir, "4020iii_11.pdf")
-    if not os.path.isfile(input_pdf):
-        print(f"File {input_pdf} not found. Please add a PDF named '4020iii_11.pdf' in the 'input' folder.")
-        exit(1)
-
-    size = "A1"           # e.g., "A4", "Letter", etc.
-    order_number = 1244
+    order_number_start = 1244
     file_number = 1
 
-    merged_path, page_files = resize_process_pdf(input_pdf, size, order_number, file_number)
+    for idx, filename in enumerate(sorted(filelist), start=0):
+        input_pdf = os.path.join(input_dir, filename)
+        if not os.path.isfile(input_pdf):
+            print(f"Invalid file path: {input_pdf}")
+            continue
 
-    print("Merged PDF saved at:", merged_path)
-    print("Individual page files:")
-    for file in page_files:
-        print(" -", file)
+        print(f"\nProcessing file: {filename} (Order #{order_number_start + idx}, File #{file_number})")
+
+        try:
+            merged_path, page_files = resize_process_pdf(
+                input_pdf,
+                size="A1",
+                order_number=order_number_start + idx,
+                file_number=file_number
+            )
+
+            print(" -> Merged PDF:", merged_path)
+            print(" -> Individual pages:")
+            for file in page_files:
+                print("    -", os.path.basename(file))
+
+            file_number += 1
+
+        except Exception as e:
+            print(f"Error processing {filename}: {str(e)}")
